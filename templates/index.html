@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🔍 Fuzzy Name Detection System</title>
+
+  <!-- Chart.js and Leaflet -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #8b5cf6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #06b6d4;
+      --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --bg-light: #f8fafc;
+      --bg-white: #ffffff;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-gradient);
+      color: white;
+      padding: 2rem 2rem 6rem;
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 40%;
+      height: 200%;
+      background: rgba(255,255,255,0.1);
+      transform: rotate(15deg);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    /* Search Section */
+    .search-section {
+      max-width: 1400px;
+      margin: -4rem auto 2rem;
+      padding: 0 2rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .search-card {
+      background: var(--bg-white);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--border);
+    }
+
+    .search-form {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .form-group input {
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-search {
+      padding: 0.75rem 2rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+
+    .btn-search:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Main Content */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem 2rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .panel {
+      background: var(--bg-white);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .panel:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: var(--primary);
+      color: white;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: var(--bg-gradient);
+      color: white;
+      z-index: 10;
+    }
+
+    th {
+      padding: 1rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    tbody tr.selected {
+      background: #dbeafe !important;
+      border-left: 4px solid var(--primary);
+    }
+
+    td {
+      padding: 1rem 0.75rem;
+      color: var(--text-dark);
+    }
+
+    .score-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .score-high {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .score-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .score-low {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Map */
+    #map {
+      height: 450px;
+      border-radius: 0.75rem;
+      border: 2px solid var(--border);
+    }
+
+    /* Charts */
+    .chart-container {
+      position: relative;
+      height: 280px;
+      padding: 1rem;
+    }
+
+    .charts-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-dark);
+    }
+
+    /* Selection Info */
+    .selection-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      animation: slideDown 0.3s ease;
+    }
+
+    .selection-info.show {
+      display: flex;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .btn-clear {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .search-form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1>
+        🔍 Fuzzy Name Detection System
+      </h1>
+      <p>Advanced bilingual name matching with real-time analytics and visualization</p>
+    </div>
+  </div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <div class="search-card">
+      <form method="POST" class="search-form">
+        <div class="form-group">
+          <label for="query">Search Name (Hindi/English)</label>
+          <input type="text" id="query" name="query" placeholder="Enter victim name..." value="{{ query }}" required>
+        </div>
+        <div class="form-group">
+          <label for="threshold">Threshold %</label>
+          <input type="number" id="threshold" name="threshold" value="60" min="30" max="100">
+        </div>
+        <div class="form-group">
+          <label for="top_k">Results</label>
+          <input type="number" id="top_k" name="top_k" value="15" min="1" max="100">
+        </div>
+        <button type="submit" class="btn-search">🔍 Search</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="selection-info" id="selectionInfo">
+      <span>
+        <strong id="selectedCount">0</strong> row(s) selected - Charts and map updated
+      </span>
+      <button class="btn-clear" onclick="clearSelection()">Clear Selection</button>
+    </div>
+
+    <div class="grid">
+      <!-- Left Column: Table & Map -->
+      <div>
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              📋 Search Results
+            </h2>
+            {% if results %}
+            <span class="badge">{{ results|length }} matches</span>
+            {% endif %}
+          </div>
+          
+          {% if results %}
+          <div class="table-container">
+            <table id="resultsTable">
+              <thead>
+                <tr>
+                  <th>English Name</th>
+                  <th>Hindi Name</th>
+                  <th>Gender</th>
+                  <th>Age</th>
+                  <th>City</th>
+                  <th>Crime Domain</th>
+                  <th>Crime Code</th>
+                  <th>Status</th>
+                  <th>Match</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in results %}
+                <tr data-id="{{ r.id }}" data-row="{{ r|tojson|escape }}">
+                  <td>{{ r.English }}</td>
+                  <td>{{ r.Hindi }}</td>
+                  <td>{{ r.Gender }}</td>
+                  <td>{{ r.Age }}</td>
+                  <td>{{ r.City }}</td>
+                  <td>{{ r['Crime Domain'] }}</td>
+                  <td>{{ r['Crime Code'] }}</td>
+                  <td>
+                    {% if r['Case Closed'] == 'Yes' %}
+                    <span style="color: var(--success); font-weight: 600;">✓ Closed</span>
+                    {% else %}
+                    <span style="color: var(--warning); font-weight: 600;">⏳ Open</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="score-badge {% if r.Similarity >= 80 %}score-high{% elif r.Similarity >= 60 %}score-medium{% else %}score-low{% endif %}">
+                      {{ r.Similarity }}%
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <h3>No results yet</h3>
+            <p>Enter a name above and click Search to find matches</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="panel" style="margin-top: 1.5rem;">
+          <div class="panel-header">
+            <h2 class="panel-title">🗺️ Geographic Distribution</h2>
+          </div>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Charts -->
+      <div class="charts-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">👥 Gender Distribution</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="genderChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">📊 Age Distribution</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="ageChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">🚨 Crime Categories</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="crimeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 Fuzzy Name Detection System | Built with ❤️ for Crime Analysis
+  </footer>
+
+  <script>
+    let allResults = {{ results|tojson|safe }};
+    let selectedRows = new Set();
+    let chartsData = {{ charts|safe }};
+    let mapPointsData = {{ map_points|safe }};
+    let chartInstances = {};
+    let mapInstance = null;
+
+    // Initialize charts and map
+    function initCharts(data) {
+      const colors = {
+        primary: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'],
+        gender: ['#6366f1', '#ec4899', '#f59e0b'],
+        age: '#8b5cf6',
+        crime: '#6366f1'
+      };
+
+      // Gender Chart
+      if (chartInstances.gender) chartInstances.gender.destroy();
+      if (data.gender && Object.keys(data.gender).length) {
+        chartInstances.gender = new Chart(document.getElementById('genderChart'), {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(data.gender),
+            datasets: [{
+              data: Object.values(data.gender),
+              backgroundColor: colors.gender,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } }
+            }
+          }
+        });
+      }
+
+      // Age Chart
+      if (chartInstances.age) chartInstances.age.destroy();
+      if (data.age && Object.keys(data.age).length) {
+        const sortedAges = Object.keys(data.age).map(Number).sort((a,b) => a-b);
+        chartInstances.age = new Chart(document.getElementById('ageChart'), {
+          type: 'bar',
+          data: {
+            labels: sortedAges,
+            datasets: [{
+              label: 'Count',
+              data: sortedAges.map(k => data.age[k]),
+              backgroundColor: colors.age,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+          }
+        });
+      }
+
+      // Crime Chart
+      if (chartInstances.crime) chartInstances.crime.destroy();
+      if (data.crime && Object.keys(data.crime).length) {
+        chartInstances.crime = new Chart(document.getElementById('crimeChart'), {
+          type: 'bar',
+          data: {
+            labels: Object.keys(data.crime),
+            datasets: [{
+              label: 'Cases',
+              data: Object.values(data.crime),
+              backgroundColor: colors.crime,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true }
+            }
+          }
+        });
+      }
+    }
+
+    // Initialize map
+    function initMap(points) {
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+      
+      mapInstance = L.map('map').setView([22.9734, 78.6569], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 18
+      }).addTo(mapInstance);
+
+      if (points && points.length) {
+        const bounds = [];
+        points.forEach(p => {
+          const marker = L.circleMarker([p.lat, p.lon], {
+            radius: 8 + (p.count * 2),
+            fillColor: '#6366f1',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+          }).addTo(mapInstance);
+          
+          marker.bindPopup(`
+            <strong>${p.city}</strong><br>
+            Crime: ${p.crime}<br>
+            Cases: ${p.count}
+          `);
+          
+          bounds.push([p.lat, p.lon]);
+        });
+        
+        if (bounds.length) {
+          mapInstance.fitBounds(bounds, { padding: [50, 50] });
+        }
+      }
+    }
+
+    // Handle row selection
+    document.getElementById('resultsTable')?.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      if (!row || !row.dataset.id) return;
+
+      const id = parseInt(row.dataset.id);
+      
+      if (selectedRows.has(id)) {
+        selectedRows.delete(id);
+        row.classList.remove('selected');
+      } else {
+        selectedRows.add(id);
+        row.classList.add('selected');
+      }
+
+      updateVisualizationsForSelection();
+    });
+
+    // Update visualizations based on selection
+    function updateVisualizationsForSelection() {
+      const count = selectedRows.size;
+      const selectionInfo = document.getElementById('selectionInfo');
+      
+      if (count === 0) {
+        selectionInfo.classList.remove('show');
+        initCharts(chartsData);
+        initMap(mapPointsData);
+        return;
+      }
+
+      selectionInfo.classList.add('show');
+      document.getElementById('selectedCount').textContent = count;
+
+      // Filter data for selected rows
+      const selectedData = allResults.filter(r => selectedRows.has(r.id));
+      
+      // Calculate new stats
+      const newCharts = {
+        gender: {},
+        age: {},
+        crime: {}
+      };
+
+      selectedData.forEach(r => {
+        if (r.Gender) newCharts.gender[r.Gender] = (newCharts.gender[r.Gender] || 0) + 1;
+        if (r.Age) newCharts.age[r.Age] = (newCharts.age[r.Age] || 0) + 1;
+        if (r['Crime Domain']) newCharts.crime[r['Crime Domain']] = (newCharts.crime[r['Crime Domain']] || 0) + 1;
+      });
+
+      // Calculate map points
+      const cityMap = {};
+      selectedData.forEach(r => {
+        const city = r.City.toLowerCase();
+        const key = city + '|' + r['Crime Domain'];
+        cityMap[key] = (cityMap[key] || 0) + 1;
+      });
+
+      const cityCoords = {
+        mumbai: [19.0760, 72.8777], indore: [22.7196, 75.8577],
+        bangalore: [12.9716, 77.5946], bengaluru: [12.9716, 77.5946],
+        surat: [21.1702, 72.8311], pune: [18.5204, 73.8567],
+        ahmedabad: [23.0225, 72.5714], patna: [25.5941, 85.1376],
+        delhi: [28.7041, 77.1025], chennai: [13.0827, 80.2707],
+        kolkata: [22.5726, 88.3639], hyderabad: [17.3850, 78.4867]
+      };
+
+      const newMapPoints = [];
+      Object.entries(cityMap).forEach(([key, count]) => {
+        const [city, crime] = key.split('|');
+        const coords = cityCoords[city] || [22.97, 78.65];
+        newMapPoints.push({
+          city: city.charAt(0).toUpperCase() + city.slice(1),
+          lat: coords[0],
+          lon: coords[1],
+          count: count,
+          crime: crime
+        });
+      });
+
+      initCharts(newCharts);
+      initMap(newMapPoints);
+    }
+
+    // Clear selection
+    function clearSelection() {
+      selectedRows.clear();
+      document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+      document.getElementById('selectionInfo').classList.remove('show');
+      initCharts(chartsData);
+      initMap(mapPointsData);
+    }
+
+    // Initialize on load
+    if (typeof Chart !== 'undefined' && typeof L !== 'undefined') {
+      initCharts(chartsData);
+      initMap(mapPointsData);
+    }
+  </script>
+</body>
+</html>
